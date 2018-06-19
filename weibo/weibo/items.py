@@ -20,8 +20,6 @@ class WeiboItem(Item):
     pictures = Field()
     source = Field()
     text = Field()
-    raw_text = Field()
-    thumbnail = Field()
     user = Field()
     created_at = Field()
     crawled_at = Field()
