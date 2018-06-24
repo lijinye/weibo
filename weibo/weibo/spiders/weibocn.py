@@ -12,7 +12,7 @@ class WeibocnSpider(scrapy.Spider):
     fans_url = 'https://m.weibo.cn/api/container/getIndex?containerid=231051_-_fans_-_{id}&since_id={page}'
     weibo_url = 'https://m.weibo.cn/api/container/getIndex?containerid=230413{id}_-_WEIBO_SECOND_PROFILE_WEIBO&page_type=03&page={page}'
     # start_users = ['1345566427']
-    start_users = ['2343286617']
+    start_users = ['1825611001']
 
     def start_requests(self):
         for user in self.start_users:

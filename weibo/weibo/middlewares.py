@@ -145,7 +145,7 @@ class ProxyMiddleware(object):
 
     def process_exception(self, request, exception, spider):
         self.logger.info('代理 ' + request.meta['proxy'] + '不可用,扣1分')
-        if self.decrease_proxy(request.meta['proxy']):
+        if self.decrease_proxy(request.meta['proxy'].split('//')[-1]):
             self.logger.info('扣分成功')
         proxy = self.get_random_proxy()
         if proxy:
