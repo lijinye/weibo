@@ -43,3 +43,6 @@ class RedisClient(object):
 
     def get_all(self):
         return self.db.zrangebyscore(REDIS_KEY, MIN_SCORE, MAX_SCORE)
+
+    def get_batch(self, start, stop):
+        return self.db.zrevrange(REDIS_KEY, start, stop)

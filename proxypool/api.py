@@ -26,7 +26,13 @@ def get_proxy():
 @app.route('/count')
 def get_count():
     conn = get_conn()
-    return conn.get_count()
+    return str(conn.get_count())
+
+
+@app.route('/decrease/<proxy>')
+def decrease(proxy):
+    conn = get_conn()
+    return str(conn.decrease(proxy))
 
 
 if __name__ == '__main__':

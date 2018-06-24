@@ -17,7 +17,7 @@ class WeiboItem(Item):
     comments_count = Field()
     reposts_count = Field()
     picture = Field()
-    pictures = Field()
+    # pictures = Field()
     source = Field()
     text = Field()
     user = Field()

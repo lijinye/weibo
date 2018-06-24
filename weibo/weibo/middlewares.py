@@ -6,6 +6,8 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+import logging
+import requests
 
 
 class WeiboSpiderMiddleware(object):
@@ -101,3 +103,53 @@ class WeiboDownloaderMiddleware(object):
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
+
+
+class ProxyMiddleware(object):
+    def __init__(self, proxy_url, decrease_url):
+        self.logger = logging.getLogger(__name__)
+        self.proxy_url = proxy_url
+        self.decrease_url = decrease_url
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            proxy_url=crawler.settings.get('PROXY_URL'),
+            decrease_url=crawler.settings.get('DECREASE_URL')
+        )
+
+    def get_random_proxy(self):
+        try:
+            response = requests.get(self.proxy_url)
+            if response.status_code == 200:
+                proxy = response.text
+                return proxy
+        except requests.ConnectionError:
+            return False
+
+    def decrease_proxy(self, proxy):
+        try:
+            response = requests.get(self.decrease_url + proxy)
+            if response.status_code == 200:
+                return True
+        except requests.ConnectionError:
+            return False
+
+    def process_request(self, request, spider):
+        # if request.meta.get('retry_times'):
+        proxy = self.get_random_proxy()
+        if proxy:
+            uri = 'https://{proxy}'.format(proxy=proxy)
+            self.logger.info('使用代理 ' + proxy)
+            request.meta['proxy'] = uri
+
+    def process_exception(self, request, exception, spider):
+        self.logger.info('代理 ' + request.meta['proxy'] + '不可用,扣1分')
+        if self.decrease_proxy(request.meta['proxy']):
+            self.logger.info('扣分成功')
+        proxy = self.get_random_proxy()
+        if proxy:
+            uri = 'https://{proxy}'.format(proxy=proxy)
+            self.logger.info('更换代理 ' + proxy)
+            request.meta['proxy'] = uri
+            return request

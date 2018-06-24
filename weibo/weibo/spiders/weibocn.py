@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import scrapy
 import json
-from weibo.weibo.items import *
-
+from weibo.items import *
+import logging
 
 class WeibocnSpider(scrapy.Spider):
     name = 'weibocn'
@@ -11,7 +11,8 @@ class WeibocnSpider(scrapy.Spider):
     followers_url = 'https://m.weibo.cn/api/container/getIndex?containerid=231051_-_followers_-_{id}&page={page}'
     fans_url = 'https://m.weibo.cn/api/container/getIndex?containerid=231051_-_fans_-_{id}&since_id={page}'
     weibo_url = 'https://m.weibo.cn/api/container/getIndex?containerid=230413{id}_-_WEIBO_SECOND_PROFILE_WEIBO&page_type=03&page={page}'
-    start_users = ['1345566427']
+    # start_users = ['1345566427']
+    start_users = ['2343286617']
 
     def start_requests(self):
         for user in self.start_users:
@@ -31,19 +32,20 @@ class WeibocnSpider(scrapy.Spider):
             for field, attr in field_map.items():
                 user_item[field] = user_info.get(attr)
             yield user_item
-        id = user_info.get('id')
-        # 关注
-        yield scrapy.Request(url=self.followers_url.format(id=id, page=1), callback=self.parse_followers,
-                             meta={'page': 1, 'id': id})
-        # 粉丝
-        yield scrapy.Request(url=self.fans_url.format(id=id, page=1), callback=self.parse_fans,
-                             meta={'id': id, 'page': 1})
-        # 微博
-        yield scrapy.Request(url=self.weibo_url.format(id=id, page=1), callback=self.parse_weibo,
-                             meta={'id': id, 'page': 1})
+            id = user_info.get('id')
+            # 关注
+            yield scrapy.Request(url=self.followers_url.format(id=id, page=1), callback=self.parse_followers,
+                                 meta={'page': 1, 'id': id})
+            # 粉丝
+            yield scrapy.Request(url=self.fans_url.format(id=id, page=1), callback=self.parse_fans,
+                                 meta={'id': id, 'page': 1})
+            # 微博
+            yield scrapy.Request(url=self.weibo_url.format(id=id, page=1), callback=self.parse_weibo,
+                                 meta={'id': id, 'page': 1})
 
     def parse_followers(self, response):
-        result = json.loas(response.text)
+        result = json.loads(response.text)
+        # logging.info(response.text)
         if result.get('ok') and result.get('data').get('cards')[-1].get('card_group') and len(
                 result.get('data').get('cards')[-1].get('card_group')):
             followers = result.get('data').get('cards')[-1].get('card_group')
@@ -65,16 +67,17 @@ class WeibocnSpider(scrapy.Spider):
 
     def parse_fans(self, response):
         result = json.loads(response.text)
-        if result.get('ok') and result.get('data').get('cards')[0].get('card_group') and len(
-                result.get('data').get('cards')[0].get('card_group')):
-            fans = result.get('data').get('cards')[0].get('card_group')
+        # logging.info(response.url)
+        if result.get('ok') and result.get('data').get('cards')[-1].get('card_group') and len(
+                result.get('data').get('cards')[-1].get('card_group')):
+            fans = result.get('data').get('cards')[-1].get('card_group')
             for fan in fans:
                 if fan.get('user'):
                     uid = fan.get('user').get('id')
                     yield scrapy.Request(url=self.userdetail_url.format(id=uid), callback=self.parse_user)
             uid = response.meta.get('id')
             user_relation_item = UserRelationItem()
-            fans1 = [{'id': fan.get('user').get('id'), 'name': fan.get('user').get('screen_name')} for fan in fans]
+            fans1 = [{'id': fan.get('user').get('id'), 'name': fan.get('user').get('screen_name')} for fan in fans if fan.get('user')]
             user_relation_item['id'] = uid
             user_relation_item['fans'] = fans1
             user_relation_item['follows'] = []
@@ -94,16 +97,16 @@ class WeibocnSpider(scrapy.Spider):
                     if mblog:
                         weibo_item = WeiboItem()
                         field_map = {
-                            'id': 'id', 'attitudes_count': 'attitudes_count', 'comments_count': 'comments_count',
+                            'id': 'id', 'attitude_count': 'attitudes_count', 'comments_count': 'comments_count',
                             'created_at': 'created_at', 'reposts_count': 'reposts_count', 'picture': 'original_pic',
-                            'pictures': 'pics', 'source': 'source', 'text': 'text'
+                            'source': 'source', 'text': 'text'
                         }
                         for field, attr in field_map.items():
                             weibo_item[field] = mblog.get(attr)
                             yield weibo_item
                 else:
                     pass
-        uid = response.meta.get('id')
-        page = response.meta.get('page') + 1
-        yield scrapy.Request(url=self.weibo_url.format(id=uid, page=page), callback=self.parse_weibo,
-                             meta={'id': uid, 'page': page})
+            uid = response.meta.get('id')
+            page = response.meta.get('page') + 1
+            yield scrapy.Request(url=self.weibo_url.format(id=uid, page=page), callback=self.parse_weibo,
+                                 meta={'id': uid, 'page': page})

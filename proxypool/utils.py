@@ -10,7 +10,7 @@ base_headers = {
 
 
 def get_page(url, options={}):
-    headers = dict(base_headers, options)
+    headers = dict(base_headers, **options)
     try:
         response = requests.get(url, headers=base_headers)
         if response.status_code == 200:

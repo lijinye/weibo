@@ -20,6 +20,6 @@ TESTER_ENABLED = True
 GETTER_ENABLED = True
 API_ENABLED = True
 
-TEST_URL = 'www.baidu.com'
+TEST_URL = 'm.weibo.cn'
 STATUS_CODE = [200]
 BATCH_TEST_COUNT = 100

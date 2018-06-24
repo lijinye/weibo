@@ -6,7 +6,8 @@
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import re
 import time
-from weibo.weibo.items import *
+from weibo.items import *
+import pymongo
 
 
 class WeiboPipeline(object):
@@ -15,8 +16,8 @@ class WeiboPipeline(object):
             if item.get('created_at'):
                 item['created_at'] = item['created_at'].strip()
                 item['created_at'] = self.parse_time(item['created_at'])
-            if item.get('pictures'):
-                item['pictures'] = [pic.get('url') for pic in item.get('pictures')]
+            # if item.get('pictures'):
+            #     item['pictures'] = [pic.get('url') for pic in item.get('pictures')]
         return item
 
     def parse_time(self, date):
@@ -41,4 +42,40 @@ class TimePipeline(object):
         if isinstance(item, UserItem) or isinstance(item, WeiboItem):
             now = time.strftime('%Y-%m-%d %H:%M', time.localtime())
             item['crawled_at'] = now
+        return item
+
+
+class MongoPipeline(object):
+    def __init__(self, mongo_uri, mongo_db):
+        self.mongo_uri = mongo_uri
+        self.mongo_db = mongo_db
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            mongo_uri=crawler.settings.get('MONGO_URI'),
+            mongo_db=crawler.settings.get('MONGO_DB')
+        )
+
+    def open_spider(self, spider):
+        self.client = pymongo.MongoClient(self.mongo_uri)
+        self.db = self.client[self.mongo_db]
+        self.db[UserItem.collection].create_index([('id', pymongo.ASCENDING)])
+        self.db[WeiboItem.collection].create_index([('id', pymongo.ASCENDING)])
+
+    def close_spider(self, spider):
+        self.client.close()
+
+    def process_item(self, item, spider):
+        if isinstance(item, UserItem) or isinstance(item, WeiboItem):
+            self.db[item.collection].update_one({'id': item.get('id')}, {'$set': item}, True)
+        if isinstance(item, UserRelationItem):
+            self.db[item.collection].update_one(
+                {'id': item.get('id')},
+                {'$addToSet':
+                    {
+                        'follows': {'$each': item['follows']},
+                        'fans': {'$each': item['fans']}
+                    }
+                }, True)
         return item

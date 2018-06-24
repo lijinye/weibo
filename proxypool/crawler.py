@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from pyquery import PyQuery
 from proxypool.utils import get_page
+import json
 
 
 class ProxyMetaClass(type):
@@ -26,6 +27,7 @@ class Crawler(object, metaclass=ProxyMetaClass):
         start_url = 'http://www.66ip.cn/{}.html'
         urls = [start_url.format(page) for page in range(1, page_count + 1)]
         for url in urls:
+            print('Crawling', url)
             res = get_page(url)
             if res:
                 doc = PyQuery(res)
@@ -33,4 +35,21 @@ class Crawler(object, metaclass=ProxyMetaClass):
                 for tr in trs:
                     ip = tr.find('td:nth-child(1)').text()
                     port = tr.find('td:nth-child(2)').text()
+                    yield ':'.join([ip, port])
+
+    def crawl_ip181(self):
+        """
+        获取ip181
+        :return: 代理
+        """
+        start_url = 'http://www.ip181.com/'
+        print('Crawling', start_url)
+        html = get_page(start_url)
+        if html:
+            res = json.loads(html)
+            results = res.get('RESULT')
+            if results:
+                for result in results:
+                    ip = result.get('ip')
+                    port = result.get('port')
                     yield ':'.join([ip, port])
